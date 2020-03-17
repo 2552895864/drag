@@ -25,6 +25,7 @@
         text-align: center;
         line-height: 40px;
         cursor: move;
+        user-select: none; /*改动1：禁用文字选中*/
       }
       .dialogVideo {
         width: 500px;
@@ -54,35 +55,48 @@
     <!-- endinject -->
     <script>
       window.onload = function() {
-        var offsetX,
-          offsetY,
-          isMoving = false;
-        function videoMouseDown(e) {
-          offsetX = parseFloat(e.offsetX);
-          offsetY = parseFloat(e.offsetY);
-          isMoving = true;
-        }
-        function videoMouseMove(e) {
-          if (!isMoving) {
-            return;
+        //改动2：将mousedown绑定到容器盒子，通过offsetX、offsetY判断是否为title区域
+        var container = document.getElementById("videoContainer");
+        container.onmousedown = function(e) {
+          if (
+            e.offsetX >= 0 &&
+            e.offsetX <= 500 &&
+            e.offsetY >= 0 &&
+            e.offsetY <= 40
+          ) {
+            let shiftX = e.clientX - container.getBoundingClientRect().left;
+            let shiftY = e.clientY - container.getBoundingClientRect().top;
+            container.style.zIndex = 1000;
+            // 将它从当前父亲中直接移到 body 中
+            // 改动3：确保容器的位置是相对于 body 的
+            if (!document.body.append) {
+              document.body.appendChild(container);
+            } else {
+              document.body.append(container);
+            }
+            // 将容器移到光标处
+            moveAt(e.pageX, e.pageY);
+
+            function moveAt(pageX, pageY) {
+              container.style.left = pageX - shiftX + "px";
+              container.style.top = pageY - shiftY + "px";
+            }
+
+            function onMouseMove(event) {
+              moveAt(event.pageX, event.pageY);
+            }
+            //改动4：将mousemove绑定到document，在容器mouseup时解除绑定
+            document.addEventListener("mousemove", onMouseMove);
+            container.onmouseup = function() {
+              document.removeEventListener("mousemove", onMouseMove);
+              container.onmouseup = null;
+            };
           }
-          let el = document.getElementById("videoContainer");
-          const posLeft = parseFloat(e.clientX) - offsetX;
-          const posTop = parseFloat(e.clientY) - offsetY;
-          el.style.left = posLeft + "px";
-          el.style.top = posTop + "px";
-        }
-        function videoMouseUp() {
-          isMoving = false;
-        }
-        function videoMouseOut() {
-          isMoving = false;
-        }
-        var title = document.getElementById("dialogTitle");
-        title.onmousedown = videoMouseDown;
-        title.onmousemove = videoMouseMove;
-        title.onmouseup = videoMouseUp;
-        title.onmouseout = videoMouseOut;
+        };
+        //改动5：排除干扰项：禁用浏览器在拖拽时的默认行为
+        container.ondragstart = function() {
+          return false;
+        };
       };
     </script>
   </body>
